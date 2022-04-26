@@ -66,9 +66,23 @@ void test_negotiated() {
 	// Try to open a negotiated channel
 	DataChannelInit init;
 	init.negotiated = true;
-	init.id = 1; // ID 2 works.
+	init.id = 0; // ID 2 works.
 	auto negotiated1 = pc1.createDataChannel("negotiated", init);
 	auto negotiated2 = pc2.createDataChannel("negotiated", init);
+
+	auto dc1 = pc1.createDataChannel("inband1");
+	auto dc2 = pc2.createDataChannel("inband2");
+
+	shared_ptr<DataChannel> dc1recv;
+	pc1.onDataChannel([&dc1recv](shared_ptr<DataChannel> dc) {
+		cout << "DataChannel 1: Received with label \"" << dc->label() << "\" id " << int(dc->id()) << endl;
+		std::atomic_store(&dc1recv, dc);
+	});
+	shared_ptr<DataChannel> dc2recv;
+	pc2.onDataChannel([&dc2recv](shared_ptr<DataChannel> dc) {
+		cout << "DataChannel 2: Received with label \"" << dc->label() << "\" id " << int(dc->id()) << endl;
+		std::atomic_store(&dc2recv, dc);
+	});
 
 	// Make the offer
 	pc1.setLocalDescription();
@@ -102,6 +116,24 @@ void test_negotiated() {
 	if (pc1.state() != PeerConnection::State::Connected &&
 	    pc2.state() != PeerConnection::State::Connected)
 		throw runtime_error("PeerConnection is not connected");
+
+	attempts = 5;
+	shared_ptr<DataChannel> adc2;
+	while ((!(adc2 = std::atomic_load(&dc2recv)) || !adc2->isOpen() || !dc2->isOpen()) && attempts--)
+		this_thread::sleep_for(1s);
+
+	attempts = 5;
+	shared_ptr<DataChannel> adc1;
+	while ((!(adc1 = std::atomic_load(&dc1recv)) || !adc1->isOpen() || !dc1->isOpen()) && attempts--)
+		this_thread::sleep_for(1s);
+
+	if (!adc1 || !adc1->isOpen() || !dc1->isOpen())
+		throw runtime_error("DataChannel 1 is not open");
+
+	if (!adc2 || !adc2->isOpen() || !dc2->isOpen())
+		throw runtime_error("DataChannel 2 is not open");
+
+
 
 	if (auto addr = pc1.localAddress())
 		cout << "Local address 1:  " << *addr << endl;
