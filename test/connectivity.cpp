@@ -127,6 +127,14 @@ void test_connectivity() {
 		std::atomic_store(&dc2, dc);
 	});
 
+	// Try to open a negotiated channel
+	DataChannelInit init;
+	init.negotiated = true;
+	init.id = 7;
+	auto negotiated1 = pc1.createDataChannel("negotiated", init);
+	auto negotiated2 = pc2.createDataChannel("negoctated", init);
+
+	// Open a non-negotiated data channel.
 	auto dc1 = pc1.createDataChannel("test");
 
 	dc1->onOpen([wdc1 = make_weak_ptr(dc1)]() {
@@ -235,20 +243,14 @@ void test_connectivity() {
 	if (!asecond2 || !asecond2->isOpen() || !second1->isOpen())
 		throw runtime_error("Second DataChannel is not open");
 
-	// Try to open a negotiated channel
-	DataChannelInit init;
-	init.negotiated = true;
-	init.id = 42;
-	auto negotiated1 = pc1.createDataChannel("negotiated", init);
-	auto negotiated2 = pc2.createDataChannel("negoctated", init);
-
+	// Check that negotiated channel is open.
 	if (!negotiated1->isOpen() || !negotiated2->isOpen())
 		throw runtime_error("Negotiated DataChannel is not open");
 
 	std::atomic<bool> received = false;
 	negotiated2->onMessage([&received](const variant<binary, string> &message) {
 		if (holds_alternative<string>(message)) {
-			cout << "Second Message 2: " << get<string>(message) << endl;
+			cout << "Negotiated Message 2: " << get<string>(message) << endl;
 			received = true;
 		}
 	});
