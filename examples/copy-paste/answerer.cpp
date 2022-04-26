@@ -32,6 +32,7 @@ int main(int argc, char **argv) {
 	rtc::InitLogger(rtc::LogLevel::Warning);
 
 	rtc::Configuration config;
+	config.disableAutoNegotiation = true;
 	// config.iceServers.emplace_back("stun.l.google.com:19302");
 
 	auto pc = std::make_shared<rtc::PeerConnection>(config);
@@ -54,20 +55,23 @@ int main(int argc, char **argv) {
 		std::cout << "[Gathering State: " << state << "]" << std::endl;
 	});
 
-	shared_ptr<rtc::DataChannel> dc;
-	pc->onDataChannel([&](shared_ptr<rtc::DataChannel> _dc) {
-		std::cout << "[Got a DataChannel with label: " << _dc->label() << "]" << std::endl;
-		dc = _dc;
+	rtc::DataChannelInit dci;
+	dci.negotiated = true;
+	dci.id = 1; // ID 2 works
+	if (argc > 1) {
+		dci.id = std::atoi(argv[1]);
+	}
+	auto dc = pc->createDataChannel("test", dci); // this is the offerer, so create a data channel
 
-		dc->onClosed(
-		    [&]() { std::cout << "[DataChannel closed: " << dc->label() << "]" << std::endl; });
+	dc->onOpen([&]() { std::cout << "[DataChannel open: " << dc->label() << "]" << std::endl; });
 
-		dc->onMessage([](auto data) {
-			if (std::holds_alternative<std::string>(data)) {
-				std::cout << "[Received message: " << std::get<std::string>(data) << "]"
-				          << std::endl;
-			}
-		});
+	dc->onClosed([&]() { std::cout << "[DataChannel closed: " << dc->label() << "]" << std::endl; });
+
+	dc->onMessage([](auto data) {
+		if (std::holds_alternative<std::string>(data)) {
+			std::cout << "[Received message: " << std::get<std::string>(data) << "]"
+			          << std::endl;
+		}
 	});
 
 	bool exit = false;
@@ -103,6 +107,7 @@ int main(int argc, char **argv) {
 			}
 			std::cout << sdp;
 			pc->setRemoteDescription(sdp);
+			pc->setLocalDescription();
 			break;
 		}
 		case 2: {

@@ -55,7 +55,13 @@ int main(int argc, char **argv) {
 		std::cout << "[Gathering State: " << state << "]" << std::endl;
 	});
 
-	auto dc = pc->createDataChannel("test"); // this is the offerer, so create a data channel
+	rtc::DataChannelInit dci;
+	dci.negotiated = true;
+	dci.id = 1; // ID 2 works
+	if (argc > 1) {
+		dci.id = std::atoi(argv[1]);
+	}
+	auto dc = pc->createDataChannel("test", dci); // this is the offerer, so create a data channel
 
 	dc->onOpen([&]() { std::cout << "[DataChannel open: " << dc->label() << "]" << std::endl; });
 
