@@ -69,6 +69,7 @@ protected:
 	weak_ptr<SctpTransport> mSctpTransport;
 
 	uint16_t mStream;
+	bool mNegotiated;
 	string mLabel;
 	string mProtocol;
 	shared_ptr<Reliability> mReliability;

@@ -85,7 +85,7 @@ bool DataChannel::IsOpenMessage(message_ptr message) {
 
 DataChannel::DataChannel(weak_ptr<PeerConnection> pc, uint16_t stream, string label,
                          string protocol, Reliability reliability)
-    : mPeerConnection(pc), mStream(stream), mLabel(std::move(label)),
+    : mPeerConnection(pc), mStream(stream), mNegotiated(true), mLabel(std::move(label)),
       mProtocol(std::move(protocol)),
       mReliability(std::make_shared<Reliability>(std::move(reliability))),
       mRecvQueue(RECV_QUEUE_LIMIT, message_size_func) {}
@@ -183,7 +183,7 @@ size_t DataChannel::maxMessageSize() const {
 
 void DataChannel::shiftStream() {
 	std::shared_lock lock(mMutex);
-	if (mStream % 2 == 1)
+	if (!mNegotiated && mStream % 2 == 1)
 		mStream -= 1;
 }
 
@@ -263,7 +263,9 @@ void DataChannel::incoming(message_ptr message) {
 
 NegotiatedDataChannel::NegotiatedDataChannel(weak_ptr<PeerConnection> pc, uint16_t stream,
                                              string label, string protocol, Reliability reliability)
-    : DataChannel(pc, stream, std::move(label), std::move(protocol), std::move(reliability)) {}
+    : DataChannel(pc, stream, std::move(label), std::move(protocol), std::move(reliability)) {
+	mNegotiated = false;
+}
 
 NegotiatedDataChannel::~NegotiatedDataChannel() {}
 
