@@ -1,8 +1,6 @@
 name: Build with Mbed TLS
 on:
   push:
-    branches:
-    - master
   pull_request:
 
 jobs:
